@@ -364,7 +364,8 @@ export default function Inventory(
         const supabase = await createClient();
         const exportSelect = `
             item:items!inner(
-                name
+                name,
+                ref_num
             ),
             store:stores(
                 name
@@ -391,12 +392,17 @@ export default function Inventory(
             return;
         }
 
-        const exportData = (data ?? []).map(item => ({
-            'Item Name': item.item?.name ?? '',
-            'Store': item.store?.name ?? '',
-            'On Hand': item.on_hand,
-            'Par': item.par,
-        }));
+        const exportData = (data ?? []).map(row => {
+            const item = Array.isArray(row.item) ? row.item[0] : row.item;
+            const store = Array.isArray(row.store) ? row.store[0] : row.store;
+            return {
+                'Item Name': item.name ?? '',
+                'Store': store.name ?? '',
+                'ID': item.ref_num ?? '',
+                'On Hand': row.on_hand,
+                'Par': row.par,
+            }
+        });
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
@@ -429,13 +435,13 @@ export default function Inventory(
                             Add Item
                         </Button>
                     </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Add Inventory Item</DialogTitle>
-                                <DialogDescription>
-                                    Add a new item to your inventory
-                                </DialogDescription>
-                            </DialogHeader>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add Inventory Item</DialogTitle>
+                            <DialogDescription>
+                                Add a new item to your inventory
+                            </DialogDescription>
+                        </DialogHeader>
                         <div className="space-y-4">
                             {isAdmin && (
                                 <div className="space-y-2">
