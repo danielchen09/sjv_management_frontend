@@ -24,14 +24,23 @@ export async function login(formData: FormData) {
     const { error } = await supabase.auth.signInWithPassword(data)
     if (error) {
         console.log('error', error)
-        return
+        return { success: false, message: error.message || 'Invalid login credentials.' }
     }
     revalidatePath('/', 'layout')
     redirect('/main/profile')
 }
 
+export async function handleLogin(formData: FormData) {
+    'use server'
+    const result = await login(formData);
+    if (result?.success === false) {
+        redirect(`/login?error=${encodeURIComponent(result.message ?? 'Invalid login credentials.')}`);
+    }
+}
 
-export default async function LoginPage() {
+
+export default async function LoginPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+    const errorMessage = typeof searchParams?.error === 'string' ? searchParams.error : null;
     return (
         <html>
             <body>
@@ -48,7 +57,10 @@ export default async function LoginPage() {
                             </CardHeader>
 
                             <CardContent>
-                                <form className='space-y-4' action={login}>
+                                <form
+                                    className='space-y-4'
+                                    action={handleLogin}
+                                >
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email</Label>
                                         <div className="relative">
@@ -77,6 +89,12 @@ export default async function LoginPage() {
                                             />
                                         </div>
                                     </div>
+                                    {errorMessage && (
+                                        <div className="flex items-center gap-2 text-destructive text-sm">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <span>{errorMessage}</span>
+                                        </div>
+                                    )}
                                     <Button type="submit" className="w-full">
                                         Sign In
                                     </Button>
